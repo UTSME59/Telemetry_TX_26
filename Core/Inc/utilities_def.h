@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2021 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -77,7 +77,9 @@ typedef enum
 {
   CFG_SEQ_Task_SubGHz_Phy_App_Process,
   /* USER CODE BEGIN CFG_SEQ_Task_Id_t */
-
+//  CFG_SEQ_Task_LED_BLINK,
+  CFG_SEQ_Task_CAN_RX,
+  CFG_SEQ_Task_RADIO_TX,
   /* USER CODE END CFG_SEQ_Task_Id_t */
   CFG_SEQ_Task_NBR
 } CFG_SEQ_Task_Id_t;

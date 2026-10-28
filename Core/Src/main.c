@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "telemetry_tx.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -91,9 +92,9 @@ int main(void)
   MX_GPIO_Init();
   MX_RTC_Init();
   MX_SPI1_Init();
-  //MX_SubGHz_Phy_Init();
+  MX_SubGHz_Phy_Init();
   /* USER CODE BEGIN 2 */
-
+  Telemetry_TX_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,7 +102,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    //MX_SubGHz_Phy_Process();
+    MX_SubGHz_Phy_Process();
 
     /* USER CODE BEGIN 3 */
     counter++;
