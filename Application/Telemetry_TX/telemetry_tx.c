@@ -67,6 +67,8 @@ static void CAN_PrintFrame(const CAN_Frame_t *frame);
 static void RADIO_TX_Task(void);
 static void RADIO_TX_Timer_Callback(void *context);
 
+volatile CAN_Status_t canInitStatus = CAN_ERROR;
+
 void Telemetry_TX_Init(void)
 {
 	//Not required due to initialisation in app_subghz_phy.c
@@ -79,7 +81,9 @@ void Telemetry_TX_Init(void)
 	UTIL_SEQ_RegTask(TASK_RADIO_TX, UTIL_SEQ_RFU, RADIO_TX_Task);
 
 	CAN_Create(&CAN1, &CAN1_Config);
-	if (CAN1.Init(&CAN1) == CAN_OK) {
+
+	canInitStatus = CAN1.Init(&CAN1);
+	if (canInitStatus == CAN_OK) {
 		const char message[] = "CAN INIT OK\r\n";
 		HAL_UART_Transmit(&huart2, (uint8_t *)message, sizeof(message)-1U, HAL_MAX_DELAY);
 	}
@@ -104,7 +108,7 @@ void Telemetry_TX_Run(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == CAN_INT_Pin) {
-		HAL_GPIO_TogglePin(INT_LED_GPIO_Port, INT_LED_Pin);
+		//HAL_GPIO_TogglePin(INT_LED_GPIO_Port, INT_LED_Pin);
 		UTIL_SEQ_SetTask(TASK_CAN_RX, 0);
 	}
 }
@@ -112,12 +116,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 static void LED_Timer_Callback(void *context)
 {
 	(void)context;
-	UTIL_SEQ_SetTask(TASK_LED_BLINK, 0);
+	//UTIL_SEQ_SetTask(TASK_LED_BLINK, 0);
 }
 
 static void LED_Blink_Task(void)
 {
-	HAL_GPIO_TogglePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin);
+	//HAL_GPIO_TogglePin(STATUS_LED_GPIO_Port, STATUS_LED_Pin);
 	//CAN_PrintDiagnostics(&CAN1);
 	UTIL_TIMER_Start(&ledTimer);
 }

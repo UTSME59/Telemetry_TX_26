@@ -278,14 +278,24 @@ MCP2515_Status_t MCP2515_Init(MCP2515_Config_t *dev)
 	 *
 	 * The MCP2515 will now receive CAN traffic and participate normally on the CAN bus.
 	 */
-	if (MCP2515_SetMode(dev, CANCTRL_MODE_NORMAL) != MCP2515_OK)
+//	if (MCP2515_SetMode(dev, CANCTRL_MODE_NORMAL) != MCP2515_OK)
+//	{
+//		MCP2515_DEBUG_PRINT("Failed to enter normal mode");
+//		return MCP2515_ERROR;
+//	}
+
+	if (MCP2515_SetMode(dev, CANCTRL_MODE_LISTEN_ONLY) != MCP2515_OK)
 	{
-		MCP2515_DEBUG_PRINT("Failed to enter normal mode");
+		MCP2515_DEBUG_PRINT("Failed to enter listen only mode");
 		return MCP2515_ERROR;
 	}
 
+
+
 	MCP2515_PRINT("Initialisation complete.");
 	return MCP2515_OK;
+
+
 }
 
 MCP2515_Status_t MCP2515_ReadMessage(MCP2515_Config_t *dev, MCP2515_Frame_t *frame)
