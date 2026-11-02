@@ -1,256 +1,124 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file    radio_board_if.c
-  * @author  MCD Application Team
-  * @brief   This file provides an interface layer between MW and Radio Board
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2026 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
+/*
+ * radio_board_if.c
+ *
+ * Custom STM32WL55CCU7 telemetry board.
+ * RF switch: Infineon BGS12P2L6
+ *
+ * PA8 LOW  -> RF1 -> RX
+ * PA8 HIGH -> RF2 -> RFO_HP TX
+ *
+ * Copyright (c) 2026 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file is provided, it is provided AS-IS.
+ */
 
-/* Includes ------------------------------------------------------------------*/
 #include "radio_board_if.h"
+#include "main.h"
+#include "stm32wlxx_hal.h"
 
-/* USER CODE BEGIN Includes */
+#if defined(USE_BSP_DRIVER)
+#error "Custom telemetry board: remove USE_BSP_DRIVER"
+#endif
 
-/* USER CODE END Includes */
+#define RF_SWITCH_TX_LEVEL GPIO_PIN_SET
+#define RF_SWITCH_RX_LEVEL GPIO_PIN_RESET
 
-/* External variables ---------------------------------------------------------*/
-/* USER CODE BEGIN EV */
-
-/* USER CODE END EV */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
-/* USER CODE BEGIN PFP */
-
-/* USER CODE END PFP */
-
-/* Exported functions --------------------------------------------------------*/
 int32_t RBI_Init(void)
 {
-  /* USER CODE BEGIN RBI_Init_1 */
+    GPIO_InitTypeDef gpio = {0};
 
-  /* USER CODE END RBI_Init_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_Init();
-#else
-  /* 2/ Or implement RBI_Init here */
-  int32_t retcode = 0;
-  /* USER CODE BEGIN RBI_Init_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_Init_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER  */
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+
+    /* Set the output latch before enabling the output. */
+    HAL_GPIO_WritePin(RF_SW_CTRL_GPIO_Port,
+                      RF_SW_CTRL_Pin,
+                      RF_SWITCH_RX_LEVEL);
+
+    gpio.Pin = RF_SW_CTRL_Pin;
+    gpio.Mode = GPIO_MODE_OUTPUT_PP;
+    gpio.Pull = GPIO_NOPULL;
+    gpio.Speed = GPIO_SPEED_FREQ_LOW;
+
+    HAL_GPIO_Init(RF_SW_CTRL_GPIO_Port, &gpio);
+
+    return 0;
 }
 
 int32_t RBI_DeInit(void)
 {
-  /* USER CODE BEGIN RBI_DeInit_1 */
+    /*
+     * Keep CTRL driven low so the switch does not float.
+     * This parks the antenna on RX.
+     */
+    HAL_GPIO_WritePin(RF_SW_CTRL_GPIO_Port,
+                      RF_SW_CTRL_Pin,
+                      RF_SWITCH_RX_LEVEL);
 
-  /* USER CODE END RBI_DeInit_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_DeInit();
-#else
-  /* 2/ Or implement RBI_DeInit here */
-  int32_t retcode = 0;
-  /* USER CODE BEGIN RBI_DeInit_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_DeInit_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER */
+    return 0;
 }
 
 int32_t RBI_ConfigRFSwitch(RBI_Switch_TypeDef Config)
 {
-  /* USER CODE BEGIN RBI_ConfigRFSwitch_1 */
+    switch (Config)
+    {
+        case RBI_SWITCH_RFO_HP:
+            HAL_GPIO_WritePin(RF_SW_CTRL_GPIO_Port,
+                              RF_SW_CTRL_Pin,
+                              RF_SWITCH_TX_LEVEL);
+            return 0;
 
-  /* USER CODE END RBI_ConfigRFSwitch_1 */
-#if defined(USE_BSP_DRIVER)
+        case RBI_SWITCH_RX:
+        case RBI_SWITCH_OFF:
+            /* The switch has no separate all-paths-off state. */
+            HAL_GPIO_WritePin(RF_SW_CTRL_GPIO_Port,
+                              RF_SW_CTRL_Pin,
+                              RF_SWITCH_RX_LEVEL);
+            return 0;
 
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_ConfigRFSwitch((BSP_RADIO_Switch_TypeDef) Config);
-#else
-  /* 2/ Or implement RBI_ConfigRFSwitch here */
-  int32_t retcode = 0;
-  /* USER CODE BEGIN RBI_ConfigRFSwitch_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_ConfigRFSwitch_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER */
+        case RBI_SWITCH_RFO_LP:
+        default:
+            /* RFO_LP is not connected on this PCB. */
+            return -1;
+    }
 }
 
 int32_t RBI_GetTxConfig(void)
 {
-  /* USER CODE BEGIN RBI_GetTxConfig_1 */
-
-  /* USER CODE END RBI_GetTxConfig_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_GetTxConfig();
-#else
-  /* 2/ Or implement RBI_GetTxConfig here */
-  int32_t retcode = RBI_CONF_RFO;
-  /* USER CODE BEGIN RBI_GetTxConfig_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_GetTxConfig_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER */
+    /* Always use the physically connected high-power output. */
+    return RBI_CONF_RFO_HP;
 }
 
 int32_t RBI_IsTCXO(void)
 {
-  /* USER CODE BEGIN RBI_IsTCXO_1 */
-
-  /* USER CODE END RBI_IsTCXO_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_IsTCXO();
-#else
-  /* 2/ Or implement RBI_IsTCXO here */
-  int32_t retcode = IS_TCXO_SUPPORTED;
-  /* USER CODE BEGIN RBI_IsTCXO_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_IsTCXO_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER  */
+    /* This board uses a crystal, not a TCXO. */
+    return 0;
 }
 
 int32_t RBI_IsDCDC(void)
 {
-  /* USER CODE BEGIN RBI_IsDCDC_1 */
-
-  /* USER CODE END RBI_IsDCDC_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_IsDCDC();
-#else
-  /* 2/ Or implement RBI_IsDCDC here */
-  int32_t retcode = IS_DCDC_SUPPORTED;
-  /* USER CODE BEGIN RBI_IsDCDC_2 */
-#warning user to provide its board code or to call his board driver functions
-  /* USER CODE END RBI_IsDCDC_2 */
-  return retcode;
-#endif  /* USE_BSP_DRIVER  */
+    /* External SMPS inductor/capacitors are fitted. */
+    return 1;
 }
 
-int32_t RBI_GetRFOMaxPowerConfig(RBI_RFOMaxPowerConfig_TypeDef Config)
+int32_t RBI_GetRFOMaxPowerConfig(
+    RBI_RFOMaxPowerConfig_TypeDef Config)
 {
-  /* USER CODE BEGIN RBI_GetRFOMaxPowerConfig_1 */
+    /*
+     * PA configuration values, not the requested TX power.
+     * RFO_LP is unused because RBI_GetTxConfig() forces HP.
+     */
+    switch (Config)
+    {
+        case RBI_RFO_LP_MAXPOWER:
+            return 15;
 
-  /* USER CODE END RBI_GetRFOMaxPowerConfig_1 */
-#if defined(USE_BSP_DRIVER)
-  /* Important note: BSP code is board dependent
-   * STM32WL_Nucleo code can be found
-   *       either in STM32CubeWL package under Drivers/BSP/STM32WLxx_Nucleo/
-   *       or at https://github.com/STMicroelectronics/STM32CubeWL/tree/main/Drivers/BSP/STM32WLxx_Nucleo/
-   * 1/ For User boards, the BSP/STM32WLxx_Nucleo/ directory can be copied and replaced in the project. The copy must then be updated depending:
-   *       on board RF switch configuration (pin control, number of port etc)
-   *       on TCXO configuration
-   *       on DC/DC configuration
-   *       on maximum output power that the board can deliver*/
-  return BSP_RADIO_GetRFOMaxPowerConfig((BSP_RADIO_RFOMaxPowerConfig_TypeDef) Config);
-#else
-  /* 2/ Or implement RBI_RBI_GetRFOMaxPowerConfig here */
-  int32_t ret = 0;
-  /* USER CODE BEGIN RBI_GetRFOMaxPowerConfig_2 */
-#warning user to provide its board code or to call his board driver functions
-  if (Config == RBI_RFO_LP_MAXPOWER)
-  {
-    ret = 15; /*dBm*/
-  }
-  else
-  {
-    ret = 22; /*dBm*/
-  }
-  /* USER CODE END RBI_GetRFOMaxPowerConfig_2 */
-  return ret;
-#endif  /* USE_BSP_DRIVER  */
+        case RBI_RFO_HP_MAXPOWER:
+            return 22;
+
+        default:
+            return -1;
+    }
 }
-/* USER CODE BEGIN EF */
-
-/* USER CODE END EF */
-
-/* Private Functions Definition -----------------------------------------------*/
-/* USER CODE BEGIN PrFD */
-
-/* USER CODE END PrFD */

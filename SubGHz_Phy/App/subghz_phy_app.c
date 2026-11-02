@@ -25,11 +25,12 @@
 #include "radio.h"
 
 /* USER CODE BEGIN Includes */
+#include "radio_service.h"
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
 /* USER CODE BEGIN EV */
-
+volatile uint32_t radioTxDoneCount = 0;
 /* USER CODE END EV */
 
 /* Private typedef -----------------------------------------------------------*/

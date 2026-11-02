@@ -81,6 +81,7 @@ bool Radio_SendCAN(const CAN_Frame_t *frame) {
 
 void Radio_TxDone(void) {
 	radioBusy = false;
+	radioTxDoneCount++;
 }
 
 void Radio_TxTimeout(void) {

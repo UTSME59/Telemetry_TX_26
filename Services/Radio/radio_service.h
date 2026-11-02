@@ -11,4 +11,6 @@ void Radio_TxDone(void);
 void Radio_TxTimeout(void);
 bool Radio_IsBusy(void);
 
+extern volatile uint32_t radioTxDoneCount;
+
 #endif
