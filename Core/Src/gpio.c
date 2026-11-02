@@ -51,12 +51,15 @@ void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(CAN_CS_GPIO_Port, CAN_CS_Pin, GPIO_PIN_SET);
 
-  /*Configure GPIO pin : CAN_CS_Pin */
-  GPIO_InitStruct.Pin = CAN_CS_Pin;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(RF_SW_CTRL_GPIO_Port, RF_SW_CTRL_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : CAN_CS_Pin RF_SW_CTRL_Pin */
+  GPIO_InitStruct.Pin = CAN_CS_Pin|RF_SW_CTRL_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(CAN_CS_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : CAN_INT_Pin */
   GPIO_InitStruct.Pin = CAN_INT_Pin;

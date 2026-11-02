@@ -25,7 +25,6 @@
 #include "radio.h"
 
 /* USER CODE BEGIN Includes */
-
 /* USER CODE END Includes */
 
 /* External variables ---------------------------------------------------------*/
