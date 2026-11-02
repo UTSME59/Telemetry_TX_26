@@ -64,6 +64,7 @@ void Error_Handler(void);
 #define CAN_CS_GPIO_Port GPIOA
 #define CAN_INT_Pin GPIO_PIN_9
 #define CAN_INT_GPIO_Port GPIOA
+#define CAN_INT_EXTI_IRQn EXTI9_5_IRQn
 #define RCC_OSC32_IN_Pin GPIO_PIN_14
 #define RCC_OSC32_IN_GPIO_Port GPIOC
 #define RCC_OSC32_OUT_Pin GPIO_PIN_15

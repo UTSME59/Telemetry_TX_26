@@ -34,6 +34,7 @@ static UTIL_TIMER_Object_t ledTimer;
 static UTIL_TIMER_Object_t radioTxTimer;
 
 static CAN_t CAN1;
+static CAN_Frame_t dummyFrame = {0};
 
 static CAN_Config_t CAN1_Config =
 {
@@ -132,6 +133,8 @@ static void CAN_RX_Task(void)
 
 	while (CAN1.Read(&CAN1, &frame) == CAN_OK)
 	{
+
+		dummyFrame = frame;
 		CAN_PrintFrame(&frame);
 	}
 }

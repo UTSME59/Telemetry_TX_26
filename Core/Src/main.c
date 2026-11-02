@@ -90,7 +90,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  //MX_RTC_Init();
+  MX_RTC_Init();
   MX_SPI1_Init();
   MX_SubGHz_Phy_Init();
   /* USER CODE BEGIN 2 */
@@ -101,6 +101,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+# warning remove counter
 	counter++;
     /* USER CODE END WHILE */
     MX_SubGHz_Phy_Process();
