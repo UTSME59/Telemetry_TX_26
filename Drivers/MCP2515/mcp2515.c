@@ -277,18 +277,25 @@ MCP2515_Status_t MCP2515_Init(MCP2515_Config_t *dev)
 	 * Enter Normal mode.
 	 *
 	 * The MCP2515 will now receive CAN traffic and participate normally on the CAN bus.
+	 * Put into Normal mode for 2-node bench test only, DON'T USE IN THE VEHICLE
 	 */
-//	if (MCP2515_SetMode(dev, CANCTRL_MODE_NORMAL) != MCP2515_OK)
-//	{
-//		MCP2515_DEBUG_PRINT("Failed to enter normal mode");
-//		return MCP2515_ERROR;
-//	}
-
-	if (MCP2515_SetMode(dev, CANCTRL_MODE_LISTEN_ONLY) != MCP2515_OK)
+# warning change to listen-only mode
+	if (MCP2515_SetMode(dev, CANCTRL_MODE_NORMAL) != MCP2515_OK)
 	{
-		MCP2515_DEBUG_PRINT("Failed to enter listen only mode");
+		MCP2515_DEBUG_PRINT("Failed to enter normal mode");
 		return MCP2515_ERROR;
 	}
+
+	/*
+	 * Enter Listen-Only mode.
+	 *
+	 * The MCP2515 will not ACK to CANBUS messages.
+	 */
+//	if (MCP2515_SetMode(dev, CANCTRL_MODE_LISTEN_ONLY) != MCP2515_OK)
+//	{
+//		MCP2515_DEBUG_PRINT("Failed to enter listen only mode");
+//		return MCP2515_ERROR;
+//	}
 
 
 

@@ -133,7 +133,7 @@ static void CAN_RX_Task(void)
 
 	while (CAN1.Read(&CAN1, &frame) == CAN_OK)
 	{
-
+# warning remove dummy
 		dummyFrame = frame;
 		CAN_PrintFrame(&frame);
 	}
