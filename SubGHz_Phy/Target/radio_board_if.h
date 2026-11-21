@@ -75,6 +75,7 @@ extern "C" {
  * 0: DCDC not supported
  * 1: DCDC supported
  */
+#warning updated from 1UL due to 1V sag on VDDRF1V55
 #define IS_DCDC_SUPPORTED                   1U
 
 /* USER CODE BEGIN Exported Parameters_2 */

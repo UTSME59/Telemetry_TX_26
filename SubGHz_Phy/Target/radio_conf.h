@@ -49,6 +49,7 @@ extern "C" {
   * @brief drive value used anytime radio is NOT in TX low power mode
   * @note override the default configuration of radio_driver.c
   */
+#warning updated from SMPS_DRV_40
 #define SMPS_DRIVE_SETTING_DEFAULT  SMPS_DRV_40
 
 /**
@@ -57,6 +58,7 @@ extern "C" {
   *        while in high power mode, current is sunk directly from the battery
   * @note override the default configuration of radio_driver.c
   */
+#warning updated from SMPS_DRV_60
 #define SMPS_DRIVE_SETTING_MAX      SMPS_DRV_60
 
 /**
@@ -70,7 +72,8 @@ extern "C" {
   * @brief in XO mode, set internal capacitor (from 0x00 to 0x2F starting 11.2pF with 0.47pF steps)
   * @note override the default configuration of radio_driver.c
   */
-#define XTAL_DEFAULT_CAP_VALUE      ( 0x20UL )
+#warning changed from defaul value
+#define XTAL_DEFAULT_CAP_VALUE      ( 0x05UL )
 
 /**
   * @brief voltage of vdd tcxo.
@@ -89,6 +92,7 @@ extern "C" {
   * @remark this define is only used if the DCDC is present on the board
   * @note override the default configuration of radio_driver.c
   */
+#warning updated from 1UL due to 1V sag on VDDRF1V55
 #define DCDC_ENABLE                 ( 1UL )
 
 /* USER CODE BEGIN EC */

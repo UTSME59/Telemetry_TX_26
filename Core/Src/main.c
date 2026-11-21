@@ -107,7 +107,8 @@ int main(void)
     MX_SubGHz_Phy_Process();
 
     /* USER CODE BEGIN 3 */
-
+//	HAL_Delay(500);
+//	HAL_GPIO_TogglePin(RF_SW_CTRL_GPIO_Port, RF_SW_CTRL_Pin);
   }
   /* USER CODE END 3 */
 }
