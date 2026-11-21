@@ -12,9 +12,6 @@ volatile uint16_t radioIrqStatus = 0;
 
 #define RADIO_TX_TIMEOUT_MS 3000U
 
-/* 4-byte ID + DLC + Flags + 8-byte data */
-#define CAN_RF_MAX_SIZE 14U
-
 static uint8_t txBuffer[CAN_RF_MAX_SIZE];
 
 static volatile bool radioBusy = false;
@@ -55,7 +52,7 @@ bool Radio_SendCANBatch(const CAN_Frame_t *frames, uint8_t count)
     uint8_t length = 0U;
 
     for (uint8_t i = 0U; i < count; ++i) {
-        CAN_Frame_t *f = &frames[i];
+        const CAN_Frame_t *f = &frames[i];
 
         if (f->dlc > 8U || f->id > (f->extended ? 0x1FFFFFFFUL : 0x7FFUL)) {
         	return false;
