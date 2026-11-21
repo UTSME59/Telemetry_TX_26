@@ -8,6 +8,7 @@
 volatile uint16_t radioIrqStatus = 0;
 
 #include <stdio.h>
+#include <string.h>
 
 #define RADIO_TX_TIMEOUT_MS 3000U
 
@@ -45,39 +46,55 @@ void Radio_Init(void) {
 	printf("[RADIO] GFSK configured at 920 MHz, 50 kb/s\r\n");
 }
 
-bool Radio_SendCAN(const CAN_Frame_t *frame) {
-	if ((frame == NULL) || radioBusy) {
-		return false;
-	}
+bool Radio_SendCANBatch(const CAN_Frame_t *frames, uint8_t count)
+{
+    if (radioBusy || frames == NULL || count == 0U || count > CAN_RF_BATCH_MAX) {
+    	return false;
+    }
 
-	if (frame->dlc > 8U) {
-		return false;
-	}
+    uint8_t length = 0U;
 
-	txBuffer[0] = (uint8_t)(frame->id);
-	txBuffer[1] = (uint8_t)(frame->id >> 8);
-	txBuffer[2] = (uint8_t)(frame->id >> 16);
-	txBuffer[3] = (uint8_t)(frame->id >> 24);
-	txBuffer[4] = frame->dlc;
-	txBuffer[5] =
-		(frame->extended ? 0x01U : 0U) |
-		(frame->rtr		 ? 0x02U : 0U);
+    for (uint8_t i = 0U; i < count; ++i) {
+        CAN_Frame_t *f = &frames[i];
 
-	for (uint8_t i = 0; i < frame->dlc; i++) {
-		txBuffer[6U + i] = frame->data[i];
-	}
+        if (f->dlc > 8U || f->id > (f->extended ? 0x1FFFFFFFUL : 0x7FFUL)) {
+        	return false;
+        }
 
-	uint8_t length = 6U + frame->dlc;
+        uint8_t *p = &txBuffer[length];
+        p[0] = (uint8_t)f->id;
+        p[1] = (uint8_t)(f->id >> 8);
+        p[2] = (uint8_t)(f->id >> 16);
+        p[3] = (uint8_t)(f->id >> 24);
+        p[4] = f->dlc;
+        p[5] = (f->extended ? 1U : 0U) | (f->rtr ? 2U : 0U);
 
-	radioBusy = true;
+        /* Preserve the existing 6 + DLC wire length for remote frames. */
+        if (f->rtr) {
+        	memset(p + 6, 0, f->dlc);
+        } else {
+            memcpy(p + 6, f->data, f->dlc);
+    	}
 
-	if (Radio.Send(txBuffer, length) != RADIO_STATUS_OK) {
-		radioBusy = false;
-		return false;
-	}
+        length += (uint8_t)(6U + f->dlc);
+    }
 
-	return true;
+    radioBusy = true;
+
+    if (Radio.Send(txBuffer, length) != RADIO_STATUS_OK) {
+        radioBusy = false;
+        return false;
+    }
+
+    return true;
 }
+
+bool Radio_SendCAN(const CAN_Frame_t *frame)
+{
+    return Radio_SendCANBatch(frame, 1U);
+}
+
+
 
 void Radio_TxDone(void) {
 	radioBusy = false;

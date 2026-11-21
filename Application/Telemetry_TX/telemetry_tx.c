@@ -23,18 +23,16 @@
 
 #include <stdio.h>
 
-//#define TASK_LED_BLINK 			(1UL << CFG_SEQ_Task_LED_BLINK)
+//#define TASK_LED_BLINK 		(1UL << CFG_SEQ_Task_LED_BLINK)
 #define TASK_CAN_RX				(1UL << CFG_SEQ_Task_CAN_RX)
 #define TASK_RADIO_TX 			(1UL << CFG_SEQ_Task_RADIO_TX)
 
-#define LED_PERIOD_MS        	5000U
-#define RADIO_TX_PERIOD_MS		1000U
+#define LED_PERIOD_MS        	5000
 
 static UTIL_TIMER_Object_t ledTimer;
 static UTIL_TIMER_Object_t radioTxTimer;
 
 static CAN_t CAN1;
-static CAN_Frame_t dummyFrame = {0};
 
 static CAN_Config_t CAN1_Config =
 {
@@ -47,23 +45,10 @@ static CAN_Config_t CAN1_Config =
 	.int_pin  = CAN_INT_Pin
 };
 
-static const CAN_Frame_t testFrame =
-{
-		.id = 0x123,
-		.dlc = 8,
-		.data = {
-			0x11, 0x22, 0x33, 0x44,
-			0x55, 0x66, 0x77, 0x88
-		},
-		.extended = false,
-		.rtr = false
-};
-
 static void LED_Blink_Task(void);
 static void LED_Timer_Callback(void *context);
 
 static void CAN_RX_Task(void);
-static void CAN_PrintFrame(const CAN_Frame_t *frame);
 
 static void RADIO_TX_Task(void);
 static void RADIO_TX_Timer_Callback(void *context);
@@ -99,6 +84,10 @@ void Telemetry_TX_Init(void)
 
 	UTIL_TIMER_Create(&radioTxTimer, RADIO_TX_PERIOD_MS, UTIL_TIMER_PERIODIC, RADIO_TX_Timer_Callback, NULL);
 	UTIL_TIMER_Start(&radioTxTimer);
+
+	if (canInitStatus == CAN_OK) {
+		UTIL_SEQ_SetTask(TASK_CAN_RX, CFG_SEQ_Prio_0);
+	}
 }
 
 void Telemetry_TX_Run(void)
@@ -129,52 +118,61 @@ static void LED_Blink_Task(void)
 
 static void CAN_RX_Task(void)
 {
-	CAN_Frame_t frame;
+    CAN_Frame_t frame;
+    uint8_t reads = 0U;
 
-	while (CAN1.Read(&CAN1, &frame) == CAN_OK)
-	{
-# warning remove dummy
-		dummyFrame = frame;
-		CAN_PrintFrame(&frame);
-	}
+    /* Yield periodically so a continuously busy CAN bus cannot hold this task. */
+    while (reads < CAN_RF_BATCH_MAX && CAN1.Read(&CAN1, &frame) == CAN_OK) {
+        ++reads;
+
+        if (queued == CAN_QUEUE_SIZE) {
+            ++canQueueDrops;
+            continue;
+        }
+
+        uint8_t tail = (uint8_t)((head + queued) % CAN_QUEUE_SIZE);
+        queue[tail].frame = frame;
+        queue[tail].arrived = UTIL_TIMER_GetCurrentTime();
+        ++queued;
+    }
+
+    if (queued >= CAN_RF_BATCH_MAX)
+        UTIL_SEQ_SetTask(TASK_RADIO_TX, CFG_SEQ_Prio_0);
+
+    /* MCP2515 INT can stay low while another frame is pending. */
+    if (reads == CAN_RF_BATCH_MAX)
+        UTIL_SEQ_SetTask(TASK_CAN_RX, CFG_SEQ_Prio_0);
 }
 
-static void CAN_PrintFrame(const CAN_Frame_t *frame)
+static void RADIO_TX_Task(void)
 {
-	char buffer[128];
+    if (Radio_IsBusy())
+        return;
 
-	int length = snprintf(buffer, sizeof(buffer), "ID: 0x%08lX DLC: %u DATA:", (unsigned long)frame->id, frame->dlc);
+    if (inFlight != 0U) {
+        if (radioTxDoneCount != doneBeforeSend) {
+            head = (uint8_t)((head + inFlight) % CAN_QUEUE_SIZE);
+            queued -= inFlight;
+        }
+        /* On a radio timeout, the records are still at the FIFO head. */
+        inFlight = 0U;
+    }
 
-	HAL_UART_Transmit(&huart2, (uint8_t *)buffer, (uint16_t)length, HAL_MAX_DELAY);
+    if (queued == 0U)
+        return;
 
-	for (uint8_t i = 0; i < frame->dlc; i++)
-	{
-		length = snprintf(buffer, sizeof(buffer), " %02X", frame->data[i]);
+    if (queued < CAN_RF_BATCH_MAX &&
+        UTIL_TIMER_GetElapsedTime(queue[head].arrived) < BATCH_MAX_AGE_MS)
+        return;
 
-		HAL_UART_Transmit(&huart2, (uint8_t *)buffer, (uint16_t)length, HAL_MAX_DELAY);
-	}
+    uint8_t count = queued < CAN_RF_BATCH_MAX ? queued : CAN_RF_BATCH_MAX;
+    for (uint8_t i = 0U; i < count; ++i)
+        batch[i] = queue[(head + i) % CAN_QUEUE_SIZE].frame;
 
-	const char newline[] = "\r\n";
-	HAL_UART_Transmit(&huart2, (uint8_t *)newline, sizeof(newline) - 1U, HAL_MAX_DELAY);
+    doneBeforeSend = radioTxDoneCount;
+    if (Radio_SendCANBatch(batch, count))
+        inFlight = count;
 }
-
-static void RADIO_TX_Task(void) {
-	static uint32_t txCount = 0;
-
-	if (Radio_SendCAN(&testFrame)) {
-		txCount++;
-
-		printf(
-			"[RADIO] TX #%lu | CAN ID: 0x%lX | DLC: %u\r\n",
-			(unsigned long)txCount,
-			(unsigned long)testFrame.id,
-			(unsigned)testFrame.dlc
-		);
-	} else {
-		printf("[RADIO] TX skipped - radio busy or invalid frame\r\n");
-	}
-}
-
 
 static void RADIO_TX_Timer_Callback(void *context) {
 	(void)context;
